@@ -17,13 +17,21 @@ class SetGameController: ObservableObject {
     var cards: Array<Card> {
         game.playingCards
     }
+
+    var deck: Array<Card> {
+        game.deck
+    }
+
+    var discardedCards: Array<Card> {
+        game.discardedCards
+    }        
     
     func choose(_ card: Card) {
         game.choose(card)
     }
     
-    func dealCards() { // Replace cards if it makes a set or add the cards
-        game.dealCards(onUserRequest: true, chosenIndex: -1)
+    func dealCard() { // Replace cards if it makes a set or add the cards
+        game.dealCard()
     }
     
     func newGame() {
@@ -32,6 +40,10 @@ class SetGameController: ObservableObject {
     
     func deckEmpty() -> Bool {
         return game.deckEmpty
+    }
+
+    func doesDeckContain(_ card: Card) {
+        game.deck.contains(card)
     }
     
 }

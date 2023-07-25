@@ -9,29 +9,87 @@ import SwiftUI
 
 struct SetGameView: View {
     @ObservedObject var game: SetGameController
-    
+    @Namespace private var dealingNamespace
+
     var body: some View {
-          Text("Set!").font(.largeTitle)
-            AspectVGrid(items: game.cards, aspectRatio: 2/3) { card in //Creating your own custom Container View to dynamically size/fit cards
-                CardView(card: card)
-                        .padding(4)
-                        .onTapGesture {
-                            game.choose(card)
-                        }
-            }
-            .padding(.horizontal)
-            Button {
-                game.dealCards()
-            } label: {
-                Text("Deal 3 More Cards")
-            }
-            .disabled(game.deckEmpty())
-            Button {
-                game.newGame()
-            } label: {
-                Text("New Game")
-            }
+        Text("Set!").font(.largeTitle)
+        gameBody
+        HStack {
+            deckBody
+            newGameButton
+            discardedBody
+        }
     }
+
+    private func dealAnimation(for card: EmojiMemoryGame.Card) -> Animation {
+        var delay = 0.0
+        if let index = game.deck.firstIndex(where: {$0.id == card.id}) {
+            delay = Double(index) * (CardConstants.totalDealDuration / Double(game.cards.count))
+        }
+        return Animation.easeInOut(duration: CardConstants.dealDuration).delay(delay)
+    }
+
+    var gameBody: some View {
+        AspectVGrid(items: game.cards, aspectRatio: 2/3) { card in //Creating your own custom Container View to dynamically size/fit cards
+            CardView(card: card)
+                .matchedGeometryEffect(id: card.id, in: dealingNamespace)
+                .transition(AnyTransition.asymmetric(insertion: .identity, removal: .scale))
+                .padding(4)
+                .onTapGesture {
+                    game.choose(card)
+                }
+        }
+        .padding(.horizontal)
+    }
+
+    var deckBody: some View {
+        ZStack {
+            ForEach(game.deck) { card in
+                RoundedRectangle(cornerRadius: DrawingsConstants.cornerRadius)
+                    .fill(.black)
+                    .matchedGeometryEffect(id: card.id, in: dealingNamespace) // Matches animation of this view with one above
+                    .transition(AnyTransition.asymmetric(insertion: .opacity, removal: .identity))
+                    .zIndex(zIndex(of: card)) // So card in deck is in a certain order
+            }
+        }
+        .frame(width: CardConstants.undealtWidth, height: CardConstants.undealtHeight)
+        .foregroundColor(.red)
+        .onTapGesture {
+            for card in deck.cards.suffix(3) {
+                withAnimation(dealAnimation(for: card)) { // We do multiple card-dealing animations at once, but with varying delays to give appearance of dealing one at a time
+                    game.dealCard()
+                }
+            }
+        }
+    }
+
+    var discardedBody: some View {
+        ZStack {
+            ForEach(game.discarded) { card in
+                CardView(card: card)
+                    .fill(.black)
+                    .matchedGeometryEffect(id: card.id, in: dealingNamespace) // Matches animation of this view with one above
+                    .transition(AnyTransition.asymmetric(insertion: .opacity, removal: .identity))
+                    .zIndex(zIndex(of: card)) // So card in deck is in a certain order
+            }
+        }
+        .frame(width: CardConstants.undealtWidth, height: CardConstants.undealtHeight)
+        .foregroundColor(.red)
+    }
+
+    var newGameButton: some View {
+        Button("New Game") { game.newGame() }
+    }
+
+    private struct CardConstants {
+        static let color = Color.red
+        static let aspectRatio: CGFloat = 2/3
+        static let dealDuration: Double = 0.5
+        static let totalDealDuration: Double = 2
+        static let undealtHeight: CGFloat = 90
+        static let undealtWidth = undealtHeight * aspectRatio
+    }
+
 }
 
 struct CardView: View {

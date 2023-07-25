@@ -12,9 +12,9 @@ struct SetGame {
     // Conceptualize how to represent deck of cards, playing cards, and discarded/won cards
     // You could have 3 arrays to move cards from one to the other
     // Or you can track 3 states of the cards in 1 array
-    // I decided actually to represent with 2 arrays (won cards are simply removed)
-    private var deck: [Card]
+    private(set) var deck: [Card]
     private(set) var playingCards: [Card]
+    private var discardedCards: [Card]
     var deckEmpty: Bool {
         deck.count == 0
     }
@@ -31,6 +31,7 @@ struct SetGame {
     init() {
         deck = []
         playingCards = []
+        discardedCards = []
         
         for id in 0..<81 { // Initialize the deck
             var ternary = String(id, radix: 3) // Represents id in base 3 (ternary)
@@ -88,36 +89,24 @@ struct SetGame {
         }
 
     }
-    
-    mutating func dealCards(onUserRequest userRequested: Bool, chosenIndex chosen: Int) { // Deals 3 cards
-        let initialSelectedCardIndices = selectedCardIndices
-        
-        if !userRequested { // If triggered after picking 4th card (instead of user-requested deal)
-            playingCards[chosen].isSelected = true // tentatively select (this may get removed/replaced if there's a set)
-        }
-        
-        if deck.isEmpty {
-            if setPresent { // Empty deck and you have a set -> remove playing cards that form a set
-                playingCards.removeAll { $0.isPartOfSet == ThreeState.stateTwo }
-            }
-        } else {
-            if setPresent { // Non-empty deck and you have a set  -> replace playing cards that form a set with deck cards
-                for index in initialSelectedCardIndices {
-                    playingCards[index] = deck.removeLast()
-                }
-            } else if userRequested { // Non-empty deck, you have no set, and user requests cards dealt -> add to playing cards with deck cards
-                for _ in 0..<3 {
-                    playingCards.append(deck.removeLast())
-                }
-            }
-        }
 
-        if !userRequested && nonSetPresent { // If you have a non-set present and dealing is not user requested
-            for index in playingCards.indices.filter({playingCards[$0].isPartOfSet == ThreeState.stateOne})  {
-                playingCards[index].isPartOfSet = ThreeState.stateZero // Return non-set to pre-set
-                playingCards[index].isSelected = false // De-select non-set cards
+    mutating func discardCards() { // Assuming we pick a 4th card after a set/non-set formed
+        if setPresent {
+            let matchedSet = playingCards.filter { $0.isPartOfSet == ThreeState.stateTwo }
+            playingCards.removeAll(where: { $0.isPartOfSet == ThreeState.stateTwo })
+            discardedCards.append(contentsOf: matchedSet)
+        }
+    }
+    
+    mutating func dealCard() { // Deals a card
+        if !deckEmpty { // Just a safety check (but should only be called if deck is not empty)
+            if setPresent {
+                let discardCardIndex = playingCards.firstIndex(where: {$0.isPartOfSet == ThreeState.stateTwo})
+                playingCards[index] = deck.removeLast()
+                discardedCards.append(discardCard)      
+            } else {
+                playingCards.append(deck.removeLast())
             }
-            playingCards[chosen].isSelected = true // Re-enable chosen one
         }
     }
     
@@ -134,7 +123,11 @@ struct SetGame {
                 evaluateSet() // Evaluates if 3 cards are a set, de-selects the cards
             }
             else { // 3 cards are picked, selecting 4th one
-                dealCards(onUserRequest: false, chosenIndex: chosenIndex)
+                for i in selectedCardIndices {
+                    playingCards[i].isSelected = false
+                }
+                playingCards[chosenIndex].isSelected = true
+                discardCards()
             }
             
             
