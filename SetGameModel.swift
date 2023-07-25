@@ -14,7 +14,7 @@ struct SetGame {
     // Or you can track 3 states of the cards in 1 array
     private(set) var deck: [Card]
     private(set) var playingCards: [Card]
-    private var discardedCards: [Card]
+    private(set) var discardedCards: [Card]
     var deckEmpty: Bool {
         deck.count == 0
     }
@@ -49,7 +49,7 @@ struct SetGame {
             )
         }
             
-        deck.shuffle() // Randomize the deck
+        //deck.shuffle() // Randomize the deck
         
         for _ in 0..<12 { // Initialize 12 playing cards (removing from deck)
             playingCards.append(deck.removeLast())
@@ -96,13 +96,16 @@ struct SetGame {
             playingCards.removeAll(where: { $0.isPartOfSet == ThreeState.stateTwo })
             discardedCards.append(contentsOf: matchedSet)
         }
+        for index in playingCards.indices {
+            playingCards[index].isPartOfSet = ThreeState.stateZero
+        }
     }
     
     mutating func dealCard() { // Deals a card
         if !deckEmpty { // Just a safety check (but should only be called if deck is not empty)
-            if setPresent {
-                let discardCardIndex = playingCards.firstIndex(where: {$0.isPartOfSet == ThreeState.stateTwo})
-                playingCards[index] = deck.removeLast()
+            if let matchIndex = playingCards.firstIndex(where: {$0.isPartOfSet == ThreeState.stateTwo}) {
+                let discardCard = playingCards[matchIndex]
+                playingCards[matchIndex] = deck.removeLast()
                 discardedCards.append(discardCard)      
             } else {
                 playingCards.append(deck.removeLast())

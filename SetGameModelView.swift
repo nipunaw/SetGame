@@ -41,9 +41,5 @@ class SetGameController: ObservableObject {
     func deckEmpty() -> Bool {
         return game.deckEmpty
     }
-
-    func doesDeckContain(_ card: Card) {
-        game.deck.contains(card)
-    }
     
 }

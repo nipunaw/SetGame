@@ -14,29 +14,36 @@ struct SetGameView: View {
     var body: some View {
         Text("Set!").font(.largeTitle)
         gameBody
+        newGameButton
         HStack {
             deckBody
-            newGameButton
+            Spacer()
             discardedBody
-        }
+        }.padding()
     }
 
-    private func dealAnimation(for card: EmojiMemoryGame.Card) -> Animation {
+    private func dealAnimation(for card: SetGameController.Card) -> Animation {
         var delay = 0.0
         if let index = game.deck.firstIndex(where: {$0.id == card.id}) {
-            delay = Double(index) * (CardConstants.totalDealDuration / Double(game.cards.count))
+            delay = Double(index) * (CardConstants.totalDealDuration / Double(3))
         }
         return Animation.easeInOut(duration: CardConstants.dealDuration).delay(delay)
     }
+    
+    private func zIndex(of card: SetGameController.Card, from source: Array<SetGameController.Card>) -> Double {
+        Double(source.firstIndex(where: {$0.id == card.id}) ?? 0)
+    }
 
     var gameBody: some View {
-        AspectVGrid(items: game.cards, aspectRatio: 2/3) { card in //Creating your own custom Container View to dynamically size/fit cards
+        AspectVGrid(items: game.cards, aspectRatio: CardConstants.aspectRatio) { card in //Creating your own custom Container View to dynamically size/fit cards
             CardView(card: card)
                 .matchedGeometryEffect(id: card.id, in: dealingNamespace)
                 .transition(AnyTransition.asymmetric(insertion: .identity, removal: .scale))
                 .padding(4)
                 .onTapGesture {
-                    game.choose(card)
+                    withAnimation {
+                        game.choose(card)
+                    }
                 }
         }
         .padding(.horizontal)
@@ -45,17 +52,17 @@ struct SetGameView: View {
     var deckBody: some View {
         ZStack {
             ForEach(game.deck) { card in
-                RoundedRectangle(cornerRadius: DrawingsConstants.cornerRadius)
-                    .fill(.black)
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.pink)
                     .matchedGeometryEffect(id: card.id, in: dealingNamespace) // Matches animation of this view with one above
                     .transition(AnyTransition.asymmetric(insertion: .opacity, removal: .identity))
-                    .zIndex(zIndex(of: card)) // So card in deck is in a certain order
+                    .zIndex(zIndex(of: card, from: game.deck)) // So card in deck is in a certain order
             }
         }
         .frame(width: CardConstants.undealtWidth, height: CardConstants.undealtHeight)
         .foregroundColor(.red)
         .onTapGesture {
-            for card in deck.cards.suffix(3) {
+            for card in game.deck.prefix(3) {
                 withAnimation(dealAnimation(for: card)) { // We do multiple card-dealing animations at once, but with varying delays to give appearance of dealing one at a time
                     game.dealCard()
                 }
@@ -65,12 +72,11 @@ struct SetGameView: View {
 
     var discardedBody: some View {
         ZStack {
-            ForEach(game.discarded) { card in
+            ForEach(game.discardedCards) { card in
                 CardView(card: card)
-                    .fill(.black)
                     .matchedGeometryEffect(id: card.id, in: dealingNamespace) // Matches animation of this view with one above
                     .transition(AnyTransition.asymmetric(insertion: .opacity, removal: .identity))
-                    .zIndex(zIndex(of: card)) // So card in deck is in a certain order
+                    .zIndex(zIndex(of: card, from: game.discardedCards)) // So card in deck is in a certain order
             }
         }
         .frame(width: CardConstants.undealtWidth, height: CardConstants.undealtHeight)
@@ -85,7 +91,7 @@ struct SetGameView: View {
         static let color = Color.red
         static let aspectRatio: CGFloat = 2/3
         static let dealDuration: Double = 0.5
-        static let totalDealDuration: Double = 2
+        static let totalDealDuration: Double = 1
         static let undealtHeight: CGFloat = 90
         static let undealtWidth = undealtHeight * aspectRatio
     }
@@ -142,6 +148,9 @@ struct CardView: View {
                 }.padding()
 
             }
+            
+            .scaleEffect(CGFloat(card.isPartOfSet == ThreeState.stateOne ? 1.05 : 1))
+            .rotationEffect(Angle.degrees(card.isPartOfSet == ThreeState.stateTwo ? 360 : 0))
         })
     }
     
