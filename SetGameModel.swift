@@ -49,7 +49,7 @@ struct SetGame {
             )
         }
             
-        //deck.shuffle() // Randomize the deck
+        deck.shuffle() // Randomize the deck
         
         for _ in 0..<12 { // Initialize 12 playing cards (removing from deck)
             playingCards.append(deck.removeLast())
